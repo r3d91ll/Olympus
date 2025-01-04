@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 class MemoryManager:
     """Manages temporary storage using tmpfs."""
 
-    def __init__(self, base_dir: str = "/tmp/olympus"):
+    def __init__(self, base_dir: str = "ramdisk"):
         """Initialize the memory manager.
 
         Args:
