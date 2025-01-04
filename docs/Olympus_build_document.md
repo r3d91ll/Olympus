@@ -98,7 +98,7 @@ The application follows a structured and modular directory setup that emphasizes
 
 The system uses a structured tmpfs directory for temporary storage:
 
-```
+```text
 /mnt/ai_tmpfs/
 ├── session_{user_id}/
 │   ├── prompts/            # Stores input prompts
