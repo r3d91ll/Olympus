@@ -12,7 +12,9 @@ To build a modular, extensible chat interface for local models using Reflex, Pyd
 
 The application follows a structured and modular directory setup that emphasizes separation of concerns:
 
-```text
+*Note: The following directory structure is for illustration and can be adapted based on specific project needs:*
+
+```
 .
 ├── app/                     # Reflex application folder
 │   ├── app.py              # Main Reflex app entry point
@@ -25,10 +27,6 @@ The application follows a structured and modular directory setup that emphasizes
 │   │   ├── frontend/       # Frontend-specific utilities
 │   │   │   ├── form_handlers.py     # Form validation and submission handlers
 │   │   │   └── data_parsers.py      # Frontend-specific data parsing utilities
-        ├── shared
-            ├── config.py
-            ├── logger.py
-            └── types.py
 │   ├── models/             # Pydantic models for validation and configuration
 │   │   ├── user.py                  # User-related data models
 │   │   ├── request.py               # Request validation models
@@ -98,7 +96,7 @@ The application follows a structured and modular directory setup that emphasizes
 
 The system uses a structured tmpfs directory for temporary storage:
 
-```text
+```
 ramdisk/
 ├── session_{user_id}/
 │   ├── prompts/            # Stores input prompts
