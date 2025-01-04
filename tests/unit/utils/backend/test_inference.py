@@ -1,8 +1,8 @@
 """Tests for inference utilities."""
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from src_new.utils.backend.inference import InferenceManager
-from src_new.utils.shared.types import Message, ModelConfig
+from app.utils.backend.inference import InferenceManager
+from app.utils.shared.types import Message, ModelConfig
 
 @pytest.fixture
 def mock_model_client():

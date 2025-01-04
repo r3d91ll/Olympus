@@ -3,7 +3,7 @@ import pytest
 import aiohttp
 from unittest.mock import AsyncMock
 from aioresponses import aioresponses
-from src_new.utils.backend.model_utils import ModelClient, LMStudioClient
+from app.utils.backend.model_utils import ModelClient, LMStudioClient
 
 @pytest.mark.asyncio
 async def test_model_client_context_manager():

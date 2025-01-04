@@ -60,7 +60,7 @@ def main() -> int:
     
     parser.add_argument(
         "--source",
-        default="src_new",
+        default="app",
         help="Source directory to measure coverage for"
     )
     

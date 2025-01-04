@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "OracleDelphi"}, {include = "src_new"}]
+packages = [{include = "OracleDelphi"}, {include = "app"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -32,7 +32,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["src_new/tests"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -40,7 +40,7 @@ addopts = [
     "--verbose",
     "-ra",
     "-q",
-    "--cov=src_new",
+    "--cov=app",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-fail-under=100"
@@ -51,7 +51,7 @@ log_cli_format = "%(asctime)s [%(levelname)s] %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
-source = ["src_new"]
+source = ["app"]
 omit = [
     "tests/*",
     "**/__init__.py",

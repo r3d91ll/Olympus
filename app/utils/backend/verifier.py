@@ -5,7 +5,7 @@ import html
 import logging
 import math
 from typing import Optional, Any
-from src_new.utils.shared.types import Message, ModelConfig, ValidationResult
+from app.utils.shared.types import Message, ModelConfig, ValidationResult
 
 # Get logger
 logger = logging.getLogger(__name__)

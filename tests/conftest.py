@@ -3,7 +3,7 @@
 import pytest
 import asyncio
 from typing import Dict, Any
-from src_new.utils.shared.types import ModelConfig
+from app.utils.shared.types import ModelConfig
 
 @pytest.fixture
 def event_loop():

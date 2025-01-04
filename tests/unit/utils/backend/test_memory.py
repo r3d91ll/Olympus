@@ -3,7 +3,7 @@ import os
 import json
 import pytest
 from pathlib import Path
-from src_new.utils.backend.memory import MemoryManager
+from app.utils.backend.memory import MemoryManager
 
 class NonSerializable:
     """Class for testing non-serializable objects."""

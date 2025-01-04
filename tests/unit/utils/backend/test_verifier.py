@@ -4,8 +4,8 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch, PropertyMock
 from pydantic import ValidationError
-from src_new.utils.backend.verifier import Verifier
-from src_new.utils.shared.types import Message, ModelConfig, ValidationResult
+from app.utils.backend.verifier import Verifier
+from app.utils.shared.types import Message, ModelConfig, ValidationResult
 
 def test_validate_message_success():
     """Test successful message validation."""

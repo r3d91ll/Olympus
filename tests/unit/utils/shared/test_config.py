@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 import pytest
-from src_new.utils.shared.config import (
+from app.utils.shared.config import (
     BASE_DIR,
     LOGS_DIR,
     RAMDISK_DIR,

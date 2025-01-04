@@ -3,7 +3,7 @@
 import pytest
 import logging
 import os
-from src_new.utils.shared.logger import setup_logging, get_logger
+from app.utils.shared.logger import setup_logging, get_logger
 
 def test_setup_logging_creates_directory(tmp_path):
     """Test that setup_logging creates the log directory if it doesn't exist."""
