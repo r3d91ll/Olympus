@@ -5,7 +5,7 @@ from pathlib import Path
 # Base directories
 BASE_DIR = Path(__file__).parent.parent.parent
 LOGS_DIR = BASE_DIR / "logs"
-RAMDISK_DIR = Path("/tmp/olympus")
+RAMDISK_DIR = Path("ramdisk")
 MODELS_DIR = BASE_DIR / "models"
 
 # Ensure required directories exist

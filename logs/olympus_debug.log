@@ -4287,3 +4287,26 @@ AttributeError: No reflex attribute Event
 2025-01-04 00:46:08 [ERROR] Config validation error: '<=' not supported between instances of 'int' and 'NoneType'
 2025-01-04 00:46:08 [ERROR] Config validation error: test error
 2025-01-04 00:46:08 [ERROR] Path validation error: test error
+2025-01-04 00:52:06 [INFO] Initialized inference manager with model test-model
+2025-01-04 00:52:06 [ERROR] Failed to initialize model: test error
+2025-01-04 00:52:06 [ERROR] Failed to initialize inference manager: test error
+2025-01-04 00:52:06 [INFO] Initialized inference manager with model test-model
+2025-01-04 00:52:06 [ERROR] No model configuration available
+2025-01-04 00:52:06 [INFO] Initialized inference manager with model test-model
+2025-01-04 00:52:06 [ERROR] Model generation error: Error: test error
+2025-01-04 00:52:06 [INFO] Initialized inference manager with model test-model
+2025-01-04 00:52:06 [ERROR] Failed to generate response: test error
+2025-01-04 00:52:06 [INFO] Initialized inference manager with model test-model
+2025-01-04 00:52:06 [ERROR] Failed to get model status: test error
+2025-01-04 00:52:06 [ERROR] Failed to retrieve data: Expecting value: line 1 column 1 (char 0)
+2025-01-04 00:52:06 [INFO] Cleared namespace ns1 data
+2025-01-04 00:52:06 [INFO] Cleared namespace nonexistent data
+2025-01-04 00:52:06 [ERROR] Failed to clear namespace: [Errno 13] Permission denied: '/tmp/pytest-of-todd/pytest-53/test_clear_namespace_error0/test_memory/ns1/test_key'
+2025-01-04 00:52:06 [INFO] Cleared all data
+2025-01-04 00:52:06 [ERROR] Failed to clear all data: [Errno 13] Permission denied: '/tmp/pytest-of-todd/pytest-53/test_clear_all_error0/test_memory/ns1'
+2025-01-04 00:52:06 [ERROR] Failed to store data: Object of type NonSerializable is not JSON serializable
+2025-01-04 00:52:06 [ERROR] Message validation error: test error
+2025-01-04 00:52:06 [ERROR] Config validation error: '<=' not supported between instances of 'int' and 'str'
+2025-01-04 00:52:06 [ERROR] Config validation error: '<=' not supported between instances of 'int' and 'NoneType'
+2025-01-04 00:52:06 [ERROR] Config validation error: test error
+2025-01-04 00:52:06 [ERROR] Path validation error: test error

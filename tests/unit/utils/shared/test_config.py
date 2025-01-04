@@ -21,7 +21,7 @@ def test_base_directories():
     # Test relative paths
     assert LOGS_DIR.parent == BASE_DIR
     assert MODELS_DIR.parent == BASE_DIR
-    assert str(RAMDISK_DIR) == "/tmp/olympus"
+    assert str(RAMDISK_DIR) == "ramdisk"
 
 def test_directory_creation():
     """Test required directories are created."""
