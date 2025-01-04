@@ -80,7 +80,7 @@ The application follows a structured and modular directory setup that emphasizes
   - Simplicity in development and deployment
   - Reduced resource overhead for a small user base
   - Clear separation of concerns
-- Temporary session data will be stored in structured directories within `/mnt/ai_tmpfs/`
+- Temporary session data will be stored in structured directories within `ramdisk/`
 
 ### Stateful Future Expansion
 
@@ -99,7 +99,7 @@ The application follows a structured and modular directory setup that emphasizes
 The system uses a structured tmpfs directory for temporary storage:
 
 ```text
-/mnt/ai_tmpfs/
+ramdisk/
 ├── session_{user_id}/
 │   ├── prompts/            # Stores input prompts
 │   │   └── prompt_{id}.txt

@@ -1,6 +1,9 @@
 """Model client utilities for the Olympus project."""
 import aiohttp
 from typing import Dict, Any, Optional
+from ..shared.logger import get_logger
+
+logger = get_logger(__name__)
 
 class ModelClient:
     """Base class for model clients."""
@@ -19,6 +22,7 @@ class ModelClient:
     async def __aenter__(self):
         """Create and return an aiohttp session."""
         self.session = aiohttp.ClientSession()
+        logger.debug(f"Initialized aiohttp session for {self.model_name}")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -26,6 +30,7 @@ class ModelClient:
         if self.session:
             await self.session.close()
             self.session = None
+            logger.debug(f"Closed aiohttp session for {self.model_name}")
 
     async def generate(self, prompt: str, config: Optional[Dict[str, Any]] = None) -> str:
         """Generate a response from the model.
@@ -41,6 +46,7 @@ class ModelClient:
             RuntimeError: If the session is not initialized or request fails.
         """
         if not self.session:
+            logger.error("Session not initialized. Use async with context.")
             raise RuntimeError("Session not initialized. Use async with context.")
             
         try:
@@ -50,8 +56,10 @@ class ModelClient:
             ) as response:
                 response.raise_for_status()
                 result = await response.json()
+                logger.debug(f"Generated response: {result['response']}")
                 return result["response"]
         except Exception as e:
+            logger.error(f"Failed to generate response: {str(e)}")
             raise RuntimeError(f"Failed to generate response: {str(e)}")
 
 class LMStudioClient(ModelClient):

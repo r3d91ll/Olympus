@@ -62,7 +62,7 @@
 *.db
 *.egg
 *.egg-info/
-#*.log
+*.log
 *.manifest
 *.mo
 *.pot
