@@ -1,0 +1,6 @@
+streamlit
+transformers
+torch
+sentence-transformers
+fastapi
+uvicorn[standard]

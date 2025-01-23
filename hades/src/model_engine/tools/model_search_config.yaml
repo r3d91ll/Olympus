@@ -1,0 +1,27 @@
+# Model Search Configuration
+
+# Keywords to search for (positive matches)
+keywords:
+  - "instruct"
+  - "code"
+
+# Model size range in billions of parameters
+size:
+  min: 3
+  max: 24
+
+# Keywords to filter out (negative matches)
+keywordfilter:
+  - "GGUF"
+  - "ggml"
+
+# Additional filters
+filters:
+  # Look for models with these tags or in model name
+  require_all:
+    - "instruct"
+    - "code"
+    # - "coder"
+
+# Target model for config fetching
+target_model: "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"

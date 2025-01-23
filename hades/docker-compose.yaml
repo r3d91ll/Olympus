@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  arangodb:
+    build:
+      context: .
+      dockerfile: Dockerfile.arangodb
+    environment:
+      - ARANGO_ROOT_PASSWORD=${ARANGO_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "8529:8529"
+    volumes:
+      - arango_data:/var/lib/arangodb3
+      - arango_apps:/var/lib/arangodb3-apps
+    deploy:
+      resources:
+        limits:
+          memory: 128G
+    networks:
+      - ladon_network
+      - hades_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ladon_network
+      - hades_network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ARANGO_HOST=arangodb
+      - REDIS_HOST=redis
+    ports:
+      - "8000:8000"
+      - "9400:9400"  # Prometheus metrics port
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    depends_on:
+      - arangodb
+      - redis
+    networks:
+      - ladon_network
+      - hades_network
+    restart: unless-stopped
+
+networks:
+  ladon_network:
+    external: true
+    name: ladonstack_ladon_network
+  hades_network:
+    driver: bridge
+
+volumes:
+  arango_data:
+  arango_apps:
+  redis_data:
