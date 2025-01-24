@@ -109,7 +109,45 @@ services:
     command: -config.file=/etc/promtail/config.yml
     restart: unless-stopped
 
+  db:
+    image: postgres:15-alpine
+    container_name: ladon-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-phoenix}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: ladon-phoenix
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PHOENIX_SQL_DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-phoenix}
+    ports:
+      - "${PHOENIX_PORT:-6006}:6006"
+      - "${PHOENIX_GRPC_PORT:-4317}:4317"
+      - "${PHOENIX_PROMETHEUS_PORT:-9091}:9091"
+    volumes:
+      - ./phoenix_logs:/app/logs
+    working_dir: /phoenix
+    entrypoint: ["/usr/bin/python3.11"]
+    command: ["-m", "phoenix.server.main", "serve"]
+    restart: unless-stopped
+
 volumes:
   prometheus_data:
   grafana_data:
   loki-data:
+  postgres_data:

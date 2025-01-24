@@ -30,28 +30,33 @@ olympus/
     ├── config/        # Configuration management
     ├── types/         # Shared type definitions
     └── utils/         # Common utilities
+```
 
 ## Core Components
 
 ### HADES (Hierarchical Adaptive Data Extraction System)
+
 - RAG-enabled database backend
 - Knowledge graph and vector storage
 - API/MCP server interface
 - Tiered memory management
 
 ### Olympus Agents
+
 - Specialized reasoning agents
 - Task scheduling and execution
 - Resource optimization
 - System automation
 
 ### Delphi
+
 - Unified human interface
 - Interactive dashboards
 - Visualization tools
 - Command center functionality
 
 ### LadonStack
+
 - System and application monitoring
 - Log aggregation and analysis
 - Distributed tracing
@@ -62,42 +67,71 @@ olympus/
 - Automated startup via systemd
 - Persistent data storage
 - Docker container monitoring
+- LLM/RAG observability with Phoenix:
+  - Token usage tracking
+  - Latency monitoring
+  - Prompt template analysis
+  - Embedding quality metrics
+  - RAG retrieval debugging
+  - Cross-component trace correlation
+
+## Monitoring Infrastructure
+
+### System Monitoring
+
+- Prometheus for metrics collection
+- Grafana for visualization
+- Node Exporter for system metrics
+- DCGM Exporter for GPU metrics
+- Loki for log aggregation
+
+### LLM/RAG Monitoring
+
+- Phoenix observability platform
+- LangChain integration
+- Project-based trace organization
+- Custom tagging support
+- Performance analytics
+- Debugging tools
 
 ## Development
 
 ### Prerequisites
+
 - Python 3.10 or higher
 - Docker and Docker Compose
 - Poetry (recommended) or pip
 
 ### Setup
+
 1. Clone the repository:
-```bash
-git clone https://github.com/your-org/olympus.git
-cd olympus
-```
+
+    ```bash
+    git clone https://github.com/your-org/olympus.git
+    cd olympus
+    ```
 
 2. Install dependencies:
 
-```bash
-# Using poetry (recommended)
-poetry install
+    ```bash
+    # Using poetry (recommended)
+    poetry install
 
-# Using pip
-pip install -e ".[dev]"
-```
+    # Using pip
+    pip install -e ".[dev]"
+    ```
 
 3. Set up environment:
 
-```bash
-cp config/development/.env.example .env
-```
+    ```bash
+    cp config/development/.env.example .env
+    ```
 
 4. Start services:
 
-```bash
-docker-compose up -d
-```
+    ```bash
+    docker-compose up -d
+    ```
 
 ### Testing
 

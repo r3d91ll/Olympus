@@ -64,3 +64,4 @@ volumes:
   arango_data:
   arango_apps:
   redis_data:
+  postgres_data:

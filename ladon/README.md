@@ -59,18 +59,21 @@ You can find more dashboards at [Grafana's dashboard repository](https://grafana
 ## System Monitoring Features
 
 ### Storage Monitoring
+
 - LVM volume groups and logical volumes monitoring
 - RAID array status monitoring (mdstat)
 - Disk I/O and utilization metrics
 - Mount point usage tracking
 
 ### System Metrics
+
 - CPU usage per core
 - System memory usage
 - Storage performance metrics
 - Docker container metrics
 
 ### Log Aggregation
+
 - System logs from `/var/log`
 - Docker container logs
 - Systemd journal logs
@@ -78,19 +81,23 @@ You can find more dashboards at [Grafana's dashboard repository](https://grafana
 ## Installation
 
 ### Using Systemd (Recommended)
+
 1. Clone this repository
 2. Run the installation script:
+
    ```bash
    sudo ./install.sh
    ```
 
 This will:
+
 - Create necessary directories
 - Install systemd services
 - Start the monitoring stack
 - Enable automatic startup on boot
 
 ### Managing the Service
+
 ```bash
 # Check status
 systemctl status ladon.service
@@ -119,6 +126,75 @@ To interact with Phoenix, you can access it at:
 - Prometheus metrics: `http://localhost:9091`
 
 Refer to the [Phoenix documentation](https://github.com/Arize-ai/phoenix/blob/main/README.md) for more details on how to use and configure Phoenix.
+
+## Phoenix Integration
+
+Phoenix provides observability for LLM and RAG applications across the Olympus project. Access the Phoenix UI at `http://localhost:6006`.
+
+### Connecting Applications to Phoenix
+
+Phoenix exposes the following ports:
+
+- 6006: Web UI
+- 4317: gRPC (for sending traces)
+- 9091: Prometheus metrics
+
+#### LangChain Integration
+
+To monitor LangChain applications (like RAG pipelines), add the Phoenix callback handler:
+
+```python
+from phoenix import Client
+from phoenix.trace.langchain import PhoenixCallbackHandler
+
+# Initialize Phoenix client
+phoenix = Client(
+    url="http://localhost:6006"  # Phoenix UI URL
+)
+
+# Create Phoenix callback
+callbacks = [PhoenixCallbackHandler()]
+
+# Use in your LangChain chain
+chain = YourLangChainComponent()
+result = chain.run(
+    callbacks=callbacks,
+    input="your input"
+)
+```
+
+#### Advanced Features
+
+1. **Project Organization**
+   - Group traces by project:
+
+   ```python
+   callbacks = [PhoenixCallbackHandler(
+       project_name="hades-rag"
+   )]
+   ```
+
+2. **Custom Tags**
+   - Add custom metadata to traces:
+
+   ```python
+   callbacks = [PhoenixCallbackHandler(
+       tags={
+           "environment": "production",
+           "model": "gpt-4",
+           "query_type": "semantic_search"
+       }
+   )]
+   ```
+
+3. **Trace Analysis**
+   - View token usage
+   - Track latency and performance
+   - Analyze prompt templates
+   - Monitor embedding quality
+   - Debug RAG retrieval results
+
+For more details on LangChain integration, visit the [Phoenix documentation](https://docs.arize.com/phoenix/tracing/integrations-tracing/langchain).
 
 ## Troubleshooting
 
