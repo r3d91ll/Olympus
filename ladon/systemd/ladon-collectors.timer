@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Ladon Collectors Periodically
+BindsTo=ladon.service
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=ladon.service

@@ -56,6 +56,55 @@ LadonStack is a comprehensive monitoring solution that integrates Phoenix, Prome
 
 You can find more dashboards at [Grafana's dashboard repository](https://grafana.com/grafana/dashboards/).
 
+## System Monitoring Features
+
+### Storage Monitoring
+- LVM volume groups and logical volumes monitoring
+- RAID array status monitoring (mdstat)
+- Disk I/O and utilization metrics
+- Mount point usage tracking
+
+### System Metrics
+- CPU usage per core
+- System memory usage
+- Storage performance metrics
+- Docker container metrics
+
+### Log Aggregation
+- System logs from `/var/log`
+- Docker container logs
+- Systemd journal logs
+
+## Installation
+
+### Using Systemd (Recommended)
+1. Clone this repository
+2. Run the installation script:
+   ```bash
+   sudo ./install.sh
+   ```
+
+This will:
+- Create necessary directories
+- Install systemd services
+- Start the monitoring stack
+- Enable automatic startup on boot
+
+### Managing the Service
+```bash
+# Check status
+systemctl status ladon.service
+
+# Stop the stack
+systemctl stop ladon.service
+
+# Start the stack
+systemctl start ladon.service
+
+# View logs
+journalctl -u ladon.service
+```
+
 ## Phoenix Setup
 
 Phoenix is an AI Observability & Evaluation tool. While it's included in this stack, it's still in development.

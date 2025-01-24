@@ -1,0 +1,72 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  path_prefix: /tmp/loki
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+  split_queries_by_interval: 24h
+  max_retries: 5
+  parallelise_shardable_queries: true
+  cache_results: true
+  max_query_length: 721h
+  max_query_parallelism: 32
+  max_entries_limit: 10000
+
+querier:
+  max_concurrent: 10
+  query_timeout: 5m
+  max_samples: 50000000
+  engine:
+    timeout: 3m
+    max_look_back_period: 30d
+
+limits_config:
+  retention_period: 30d
+  max_query_series: 10000
+  max_query_lookback: 30d
+  max_streams_per_user: 10000
+  max_entries_limit_per_query: 10000
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  max_cache_freshness_per_query: 10m
+  split_queries_by_interval: 24h
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /tmp/loki/rules
+  rule_path: /tmp/loki/rules-temp
+  alertmanager_url: http://localhost:9093
+  ring:
+    kvstore:
+      store: inmemory
+  enable_api: true

@@ -2,6 +2,35 @@
 
 A comprehensive AI system composed of four specialized components working in harmony to provide intelligent data management, autonomous operations, monitoring, and user interaction.
 
+## Project Structure
+
+```text
+olympus/
+├── hades/              # Hierarchical Adaptive Data Extraction System
+│   ├── api/           # REST API endpoints
+│   ├── core/          # Core RAG and knowledge graph functionality
+│   ├── models/        # Data models and schemas
+│   └── utils/         # HADES-specific utilities
+├── agents/            # Olympus Agents
+│   ├── api/           # Agent communication endpoints
+│   ├── core/          # Agent core logic and reasoning
+│   ├── models/        # Agent models and types
+│   └── utils/         # Agent-specific utilities
+├── delphi/            # User Interface and Visualization
+│   ├── api/           # UI backend endpoints
+│   ├── core/          # Core UI logic
+│   ├── models/        # UI state and data models
+│   └── utils/         # UI utilities
+├── ladon/             # System Monitoring and Management
+│   ├── api/           # Monitoring endpoints
+│   ├── core/          # Core monitoring logic
+│   ├── models/        # Monitoring models
+│   └── utils/         # Monitoring utilities
+└── shared/            # Shared Components
+    ├── config/        # Configuration management
+    ├── types/         # Shared type definitions
+    └── utils/         # Common utilities
+
 ## Core Components
 
 ### HADES (Hierarchical Adaptive Data Extraction System)
@@ -28,46 +57,82 @@ A comprehensive AI system composed of four specialized components working in har
 - Distributed tracing
 - Alert management
 - Health monitoring
+- Storage performance tracking (LVM, RAID)
+- System metrics collection
+- Automated startup via systemd
+- Persistent data storage
+- Docker container monitoring
 
-## Quick Start
+## Development
 
+### Prerequisites
+- Python 3.10 or higher
+- Docker and Docker Compose
+- Poetry (recommended) or pip
+
+### Setup
 1. Clone the repository:
 ```bash
 git clone https://github.com/your-org/olympus.git
 cd olympus
 ```
 
-2. Set up environment:
+2. Install dependencies:
+
+```bash
+# Using poetry (recommended)
+poetry install
+
+# Using pip
+pip install -e ".[dev]"
+```
+
+3. Set up environment:
+
 ```bash
 cp config/development/.env.example .env
 ```
 
-3. Start the services:
+4. Start services:
+
 ```bash
 docker-compose up -d
 ```
 
-4. Initialize the system:
+### Testing
+
 ```bash
-./scripts/setup/init.sh
+# Run all tests
+pytest
+
+# Run specific test suite
+pytest tests/unit/
+pytest tests/integration/
+
+# Run with coverage
+pytest --cov=olympus
 ```
 
-## Development
+### Code Quality
 
-Each component has its own development workflow and documentation:
+```bash
+# Format code
+black olympus tests
+isort olympus tests
 
-- [HADES Development Guide](hades/docs/development.md)
-- [Olympus Agents Guide](agents/docs/development.md)
-- [Delphi Frontend Guide](delphi/docs/development.md)
-- [LadonStack Integration](ladon/docs/integration.md)
+# Type checking
+mypy olympus
+
+# Linting
+flake8 olympus tests
+```
 
 ## Documentation
 
-- [System Architecture](docs/architecture/README.md)
-- [API Documentation](docs/api/README.md)
-- [Deployment Guide](docs/deployment/README.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
+- API documentation is available in `docs/api/`
+- Architecture details in `docs/architecture/`
+- Deployment guides in `docs/deployment/`
 
-## License
+## Contributing
 
-See [LICENSE](LICENSE) file for details.
+Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting pull requests.

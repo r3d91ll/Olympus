@@ -1,0 +1,12 @@
+[Unit]
+Description=Node Exporter Custom Collectors
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/todd/ML-Lab/Olympus/ladon/node-exporter-textfile/mdstat.sh
+ExecStart=/home/todd/ML-Lab/Olympus/ladon/node-exporter-textfile/lvm.sh
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -4,8 +4,16 @@ from pydantic import BaseModel
 
 from memory_management.manager import MemoryManager
 from db.arango import ArangoDB
+from .rag_router import router as rag_router
 
 router = APIRouter()
+
+# Include RAG router
+router.include_router(
+    rag_router,
+    prefix="/rag",
+    tags=["rag"]
+)
 
 class StoreRequest(BaseModel):
     key: str

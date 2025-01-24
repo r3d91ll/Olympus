@@ -1,0 +1,22 @@
+# Data directories
+prometheus-data/
+grafana-data/
+loki-data/
+node-exporter-textfile/*.prom
+
+# Log files
+*.log
+
+# Environment files
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

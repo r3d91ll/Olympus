@@ -4,12 +4,16 @@ import uvicorn
 
 from api.router import router as api_router
 from core.config import settings
+from core.monitoring import init_monitoring
 
 app = FastAPI(
     title="HADES API",
     description="Hierarchical Adaptive Data Extraction System",
     version="1.0.0"
 )
+
+# Initialize monitoring
+init_monitoring(app)
 
 app.include_router(api_router, prefix="/api")
 
