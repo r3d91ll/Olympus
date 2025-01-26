@@ -20,7 +20,7 @@ dependencies = [
     "torch>=2.0.0",
     "transformers>=4.34.0",
     "langchain>=0.0.300",
-    "arangodb>=3.9.1",
+    "python-arango>=7.9.1",
     "redis>=5.0.1",
     "prometheus-client>=0.17.1",
     "opentelemetry-api>=1.20.0",
@@ -61,3 +61,6 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=olympus --cov-report=html"
 asyncio_mode = "auto"
+
+[tool.hatch.build.targets.wheel]
+packages = ["olympus"]

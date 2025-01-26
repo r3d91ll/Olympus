@@ -8,15 +8,24 @@ node-exporter-textfile/*.prom
 *.log
 
 # Environment files
-.env
+.nv
 
 # System files
 .DS_Store
 Thumbs.db
 
+# Model files and caches
+models/
+cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+
 # Editor directories and files
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
+.venv/
+.coverage/

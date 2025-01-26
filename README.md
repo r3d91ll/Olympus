@@ -6,7 +6,7 @@ A comprehensive AI system composed of four specialized components working in har
 
 ```text
 olympus/
-├── hades/              # Hierarchical Adaptive Data Extraction System
+├── hades/              #Heuristic Adaptive Data Extraction System
 │   ├── api/           # REST API endpoints
 │   ├── core/          # Core RAG and knowledge graph functionality
 │   ├── models/        # Data models and schemas
