@@ -8,7 +8,7 @@ from core.monitoring import init_monitoring
 
 app = FastAPI(
     title="HADES API",
-    description="Hierarchical Adaptive Data Extraction System",
+    description="Heuristic Adaptive Data Extraction System",
     version="1.0.0"
 )
 

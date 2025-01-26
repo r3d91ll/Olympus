@@ -180,7 +180,7 @@ pip install langgraph
 - Node.js (LTS version recommended)
 - npm (package manager)
 - Docker (optional for containerized installation)
-- Python 3.8+ with pip
+- python 3.10+ with pip
 - CUDA-compatible GPU (recommended)
 
 ## 4. Base Environment Setup
@@ -495,7 +495,7 @@ This project is MIT licensed. For support, contact internal maintainers or the r
 
 Project Olympus is designed as a trinity of specialized systems, each with distinct responsibilities but working in harmony:
 
-### 1. HADES (Hierarchical Adaptive Data Extraction System)
+### 1. HADES (Heuristic Adaptive Data Extraction System)
 The intelligent backend that serves as the foundation for knowledge management and retrieval.
 
 #### Core Responsibilities

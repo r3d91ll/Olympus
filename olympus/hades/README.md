@@ -3,7 +3,7 @@
 ## Overview
 Project Olympus is a comprehensive AI system composed of three primary components, each serving a specialized role in the ecosystem:
 
-1. **H.A.D.E.S.** (Hierarchical Adaptive Data Extraction System)
+1. **H.A.D.E.S.** (Heuristic Adaptive Data Extraction System)
    - RAG-enabled database backend
    - Knowledge graph and vector storage
    - API/MCP server interface

@@ -10,7 +10,7 @@ Project Olympus is an integrated AI system composed of five specialized componen
 
 ## System Components
 
-### 1. HADES (Hierarchical Adaptive Data Extraction System)
+### 1. HADES (Heuristic Adaptive Data Extraction System)
 
 Core backend system providing:
 

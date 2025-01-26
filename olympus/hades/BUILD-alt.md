@@ -3,7 +3,7 @@
 **Version:** 1.0.0  
 **Last Updated:** 2025-01-23  
 **Status:** Development  
-**Component:** HADES (Hierarchical Adaptive Data Extraction System)
+**Component:** HADES (Heuristic Adaptive Data Extraction System)
 
 ## Overview
 

@@ -34,7 +34,7 @@ olympus/
 
 ## Core Components
 
-### HADES (Hierarchical Adaptive Data Extraction System)
+### HADES (Heuristic Adaptive Data Extraction System)
 
 - RAG-enabled database backend
 - Knowledge graph and vector storage
