@@ -1,68 +1,60 @@
-"""Core model engine implementation."""
+"""Core model engine implementation using vLLM's OpenAI-compatible API."""
+import signal
 from typing import Optional
-
-from olympus.model_engine.registry import ModelRegistry
-from olympus.model_engine.inference import InferenceEngine
-from olympus.model_engine.monitoring import ModelMonitor
-
+import subprocess
+from pathlib import Path
 
 class ModelEngine:
-    """Main model engine class for managing model operations.
+    """Manages vLLM model server process."""
     
-    This class serves as the primary interface for model operations including:
-    - Model inference and code generation
-    - Model registry management
-    - Usage monitoring and metrics tracking
-    
-    As the engine grows, it will support:
-    - Different model types (language, vision, multi-modal)
-    - Various inference patterns (streaming, batched)
-    - Advanced monitoring and telemetry
-    - Model versioning and lifecycle management
-    """
-    
-    def __init__(
-        self,
-        registry: ModelRegistry,
-        inference: InferenceEngine,
-        monitor: ModelMonitor
-    ) -> None:
+    def __init__(self, model_path: Optional[Path] = None) -> None:
         """Initialize model engine.
         
         Args:
-            registry: Registry for model management
-            inference: Engine for running inference
-            monitor: Monitor for tracking model usage
+            model_path: Optional path to model directory for storing downloaded models
         """
-        self._registry = registry
-        self._inference = inference
-        self._monitor = monitor
-
-    def run(self, model_name: str, input_data: str) -> str:
-        """Run inference on input data.
+        self.model_path = model_path or Path.home() / ".cache" / "olympus" / "models"
+        self.model_path.mkdir(parents=True, exist_ok=True)
+        self._current_process: Optional[subprocess.Popen] = None
+        
+    def start_server(self, model_name: str, port: int = 8000) -> None:
+        """Start vLLM OpenAI-compatible API server.
+        
+        This downloads the model if needed and serves it via FastAPI
+        with an OpenAI-compatible /v1/completions endpoint.
         
         Args:
-            model_name: Name of model to use
-            input_data: Input data for inference
+            model_name: Name of HuggingFace model to load
+            port: Port to serve model on (default: 8000)
             
-        Returns:
-            Model output
+        Raises:
+            RuntimeError: If server is already running
         """
-        with self._monitor.track_inference(model_name=model_name):
-            model = self._registry.get_model(model_name)
-            return self._inference.run(model=model, input_data=input_data)
-
-    def generate_code(self, prompt: str, model_name: Optional[str] = None) -> str:
-        """Generate code from prompt.
-        
-        Args:
-            prompt: Input prompt
-            model_name: Optional model name to use, defaults to configured default
+        if self._current_process:
+            raise RuntimeError("Server is already running. Stop it first.")
             
-        Returns:
-            Generated code
-        """
-        model = self._registry.get_model(model_name) if model_name else self._registry.get_default_model()
+        # Start vLLM OpenAI-compatible server
+        self._current_process = subprocess.Popen([
+            "python", "-m", "vllm.entrypoints.openai.api_server",
+            "--model", model_name,
+            "--port", str(port),
+            "--download-dir", str(self.model_path)
+        ])
         
-        with self._monitor.track_inference(model_name=model.name_or_path):
-            return self._inference.run(model=model, input_data=prompt)
+    def stop_server(self) -> None:
+        """Gracefully stop the vLLM server."""
+        if not self._current_process:
+            return
+            
+        # Send SIGTERM to allow graceful shutdown
+        self._current_process.send_signal(signal.SIGTERM)
+        
+        # Wait up to 30 seconds for process to end
+        try:
+            self._current_process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            # Force kill if graceful shutdown fails
+            self._current_process.kill()
+            self._current_process.wait()
+            
+        self._current_process = None

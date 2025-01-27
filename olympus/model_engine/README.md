@@ -1,84 +1,77 @@
 # Model Engine
 
-The Model Engine is a shared component across the Olympus ecosystem that provides unified model management, inference, and monitoring capabilities.
-
-## Architecture
-
-The Model Engine is organized into the following key components:
-
-### Core Components
-
-- **Model Management**: Handles model loading, versioning, and lifecycle
-- **Inference Engine**: Provides unified inference interface across different model types
-- **Model Registry**: Maintains model metadata and versioning
-- **Monitoring**: Integration with Ladon for model performance monitoring
-
-### Directory Structure
-
-```
-model_engine/
-├── config/           # Configuration files and schemas
-├── docs/            # Documentation
-├── models/          # Model definitions and implementations
-├── src/
-│   ├── core/       # Core model engine functionality
-│   ├── registry/   # Model registry implementation
-│   ├── inference/  # Inference engine implementation
-│   ├── monitoring/ # Monitoring integration with Ladon
-│   └── utils/      # Shared utilities
-└── tests/          # Test suite
-```
+A lightweight wrapper around vLLM that provides an OpenAI-compatible API server for running LLMs.
 
 ## Features
 
-- Unified model interface across different model types (LLM, ML, etc.)
-- Model versioning and lifecycle management
-- Performance monitoring and metrics collection
-- Caching and optimization
-- Integration with Ladon monitoring stack
-- Support for different model hosting strategies (local, remote, containerized)
+- Simple process management for vLLM server
+- OpenAI-compatible API endpoint
+- Automatic model downloading and caching
+- Graceful server shutdown
+- Configurable model path and port
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
 ```python
-from model_engine import ModelEngine
+from olympus.model_engine.core.engine import ModelEngine
 
-# Initialize engine
-engine = ModelEngine(config_path="config/default.yaml")
+# Create engine instance
+engine = ModelEngine()
 
-# Load model
-model = engine.load_model("model_name", version="1.0.0")
+# Start server with a model (downloads if needed)
+engine.start_server("Salesforce/codegen-350M-mono", port=8000)
 
-# Run inference
-result = model.infer(input_data)
+# Server is now running at http://localhost:8000
+# Use any OpenAI-compatible client to make requests:
+# - POST /v1/completions
+# - POST /v1/chat/completions
+
+# When done, stop the server
+engine.stop_server()
 ```
 
-## Integration
+### OpenAI API Example
 
-The Model Engine is designed to be used by various components in the Olympus ecosystem:
+```python
+import openai
 
-- **HADES**: For RAG operations and knowledge processing
-- **Agents**: For specialized reasoning tasks
-- **Delphi**: For direct model interactions via the UI
+# Point to local vLLM server
+openai.api_base = "http://localhost:8000/v1"
+openai.api_key = "not-needed"
 
-## Development
+# Make completion request
+response = openai.Completion.create(
+    model="codegen-350M-mono",  # Model name doesn't matter
+    prompt="def fibonacci(n):",
+    max_tokens=100,
+    temperature=0.7
+)
+print(response.choices[0].text)
+```
 
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Configuration
 
-2. Run tests:
-   ```bash
-   pytest tests/
-   ```
+The ModelEngine can be configured with:
 
-## Monitoring
+- `model_path`: Directory for storing downloaded models (default: ~/.cache/olympus/models)
+- `port`: Port for the API server (default: 8000)
 
-The Model Engine integrates with Ladon for comprehensive monitoring:
+Additional vLLM options like GPU selection and tensor parallelism will be added in future releases.
 
-- Model performance metrics
-- Inference latency tracking
-- Memory usage
-- Error rates and types
-- Cache hit/miss rates
+## Testing
+
+Run the test suite:
+
+```bash
+python -m pytest tests/model_engine --cov=olympus.model_engine -v
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for development guidelines.

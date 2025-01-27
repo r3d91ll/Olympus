@@ -2,7 +2,7 @@ torch
 accelerate
 transformers
 diffusers
-vllm
+vllm>=0.3.0  # For running LLMs with OpenAI-compatible API
 click
 pydantic
 numpy

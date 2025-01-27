@@ -1,68 +1,68 @@
 """Test model engine functionality."""
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+import subprocess
+import signal
+from pathlib import Path
 
 from olympus.model_engine.core.engine import ModelEngine
-from olympus.model_engine.registry import ModelRegistry
-from olympus.model_engine.inference import InferenceEngine
-from olympus.model_engine.monitoring import ModelMonitor
-from tests.model_engine.test_constants import TEST_MODEL
 
-def test_model_registry_search(model_registry: ModelRegistry, mock_huggingface_hub: MagicMock):
-    """Test model search functionality."""
-    # Setup mock response
-    mock_huggingface_hub.list_models.return_value = [
-        {"modelId": TEST_MODEL, "tags": ["code-generation"]}
-    ]
-    
-    # Test search
-    results = model_registry.search("test")
-    assert len(results) > 0
-    assert TEST_MODEL in results
+TEST_MODEL = "Salesforce/codegen-350M-mono"
 
-def test_model_registry_load(model_registry: ModelRegistry):
-    """Test model loading functionality."""
-    model = model_registry.get_model(TEST_MODEL)
-    assert model.name_or_path == TEST_MODEL
+@pytest.fixture
+def model_engine():
+    """Create model engine instance."""
+    return ModelEngine(model_path=Path("/tmp/test_models"))
 
-def test_inference_engine_run(inference_engine: InferenceEngine, model_registry: ModelRegistry):
-    """Test model inference functionality."""
-    # Setup test input
-    test_input = "def hello_world():"
-    model = model_registry.get_model(TEST_MODEL)
-    
-    # Test inference
-    output = inference_engine.run(
-        model=model,
-        input_data=test_input
-    )
-    assert output == "def hello_world():\n    print('Hello World!')"
+def test_server_start_and_stop(model_engine):
+    """Test server start and stop."""
+    # Mock subprocess.Popen
+    mock_process = MagicMock()
+    with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
+        # Test starting server
+        model_engine.start_server(TEST_MODEL)
+        
+        # Verify process started with correct args
+        mock_popen.assert_called_once_with([
+            "python", "-m", "vllm.entrypoints.openai.api_server",
+            "--model", TEST_MODEL,
+            "--port", "8000",
+            "--download-dir", str(model_engine.model_path)
+        ])
+        
+        # Test stopping server
+        model_engine.stop_server()
+        
+        # Verify SIGTERM was sent
+        mock_process.send_signal.assert_called_once_with(signal.SIGTERM)
+        mock_process.wait.assert_called()
 
-def test_model_monitor_track(model_monitor: ModelMonitor, mock_monitoring: MagicMock):
-    """Test model monitoring functionality."""
-    # Setup mock counter
-    counter_mock = MagicMock()
-    counter_mock.labels.return_value = counter_mock
-    mock_monitoring.return_value = counter_mock
-    model_monitor.inference_counter = counter_mock
-    
-    # Test monitoring
-    with model_monitor.track_inference(model_name=TEST_MODEL):
-        pass  # Simulate work
-    
-    # Verify monitoring calls
-    counter_mock.labels.assert_called_with(model_name=TEST_MODEL)
-    counter_mock.inc.assert_called_once()
+def test_server_start_error_if_already_running(model_engine):
+    """Test error when starting server while one is already running."""
+    # Mock subprocess.Popen
+    mock_process = MagicMock()
+    with patch("subprocess.Popen", return_value=mock_process):
+        # Start first server
+        model_engine.start_server(TEST_MODEL)
+        
+        # Try to start second server
+        with pytest.raises(RuntimeError, match="Server is already running"):
+            model_engine.start_server(TEST_MODEL)
 
-def test_model_engine_integration(
-    model_engine: ModelEngine,
-    mock_monitoring: MagicMock
-):
-    """Test model engine integration."""
-    # Test code generation
-    output = model_engine.generate_code("Write a hello world function")
-    assert output == "def hello_world():\n    print('Hello World!')"
+def test_server_stop_handles_timeout(model_engine):
+    """Test stop handles timeout gracefully."""
+    # Mock subprocess.Popen
+    mock_process = MagicMock()
+    mock_process.wait.side_effect = [subprocess.TimeoutExpired("cmd", 30), None]
     
-    # Verify monitoring was called
-    assert mock_monitoring.return_value.labels.called
-    assert mock_monitoring.return_value.labels().inc.called
+    with patch("subprocess.Popen", return_value=mock_process):
+        # Start and stop server
+        model_engine.start_server(TEST_MODEL)
+        model_engine.stop_server()
+        
+        # Verify SIGTERM was sent first
+        mock_process.send_signal.assert_called_once_with(signal.SIGTERM)
+        
+        # Verify process was killed after timeout
+        mock_process.kill.assert_called_once()
+        assert mock_process.wait.call_count == 2

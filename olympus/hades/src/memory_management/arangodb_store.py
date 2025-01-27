@@ -4,7 +4,7 @@ import asyncio
 from loguru import logger
 from arango import ArangoClient
 from pydantic import BaseModel
-from phoenix_monitor import PhoenixMonitor  # Import PhoenixMonitor
+from ..monitoring.phoenix_monitor import PhoenixMonitor
 
 class VectorNode(BaseModel):
     """Represents a vector node in the memory graph."""
@@ -34,278 +34,216 @@ class ArangoMemoryStore:
         vector_dimension: int = 1536,  # Default for many embedding models
         phoenix_monitor: Optional[PhoenixMonitor] = None
     ):
-        self.client = ArangoClient(hosts=host)
-        self.db = self.client.db(db_name, username=username, password=password)
-        self.vector_dim = vector_dimension
-        self.monitor = phoenix_monitor
-        
-        # Initialize collections and indexes
-        self._init_collections()
+        """Initialize ArangoDB store with vector and graph capabilities."""
+        try:
+            self.client = ArangoClient(hosts=host)
+            self.db = self.client.db(db_name, username=username, password=password)
+            self.vector_dim = vector_dimension
+            self.monitor = phoenix_monitor
+            
+            # Initialize collections and indexes
+            self._init_collections()
+            
+            if self.monitor:
+                self.monitor.record_metric("store_init_success", 1)
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize ArangoDB store: {str(e)}")
+            if self.monitor:
+                self.monitor.record_metric("store_init_failure", 1)
+            raise
         
     def _init_collections(self):
         """Initialize collections and indexes."""
-        if not self.db.has_collection("memory_nodes"):
-            self.db.create_collection("memory_nodes")
-            # Create vector index for similarity search
-            self.db.collection("memory_nodes").add_persistent_index(
-                fields=["vector[*]"],
-                name="vector_index",
-                in_background=True
-            )
+        try:
+            # Create memory nodes collection if it doesn't exist
+            if not self.db.has_collection("memory_nodes"):
+                self.db.create_collection("memory_nodes")
+                nodes = self.db.collection("memory_nodes")
+                
+                # Create vector index for similarity search
+                nodes.add_persistent_index(
+                    fields=["vector[*]"],
+                    sparse=False,
+                    unique=False,
+                    name="vector_index"
+                )
+                
+                # Create metadata indexes
+                nodes.add_hash_index(
+                    fields=["metadata.source"],
+                    sparse=True,
+                    unique=False,
+                    name="source_index"
+                )
+                
+            # Create memory edges collection if it doesn't exist
+            if not self.db.has_collection("memory_edges"):
+                self.db.create_collection("memory_edges", edge=True)
+                edges = self.db.collection("memory_edges")
+                
+                # Create edge indexes
+                edges.add_hash_index(
+                    fields=["relation_type"],
+                    sparse=False,
+                    unique=False,
+                    name="relation_index"
+                )
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize collections: {str(e)}")
+            raise
             
-        if not self.db.has_collection("memory_edges"):
-            self.db.create_collection("memory_edges", edge=True)
-            
-        # Create graph if it doesn't exist
-        if not self.db.has_graph("memory_graph"):
-            graph = self.db.create_graph("memory_graph")
-            graph.create_edge_definition(
-                edge_collection="memory_edges",
-                from_vertex_collections=["memory_nodes"],
-                to_vertex_collections=["memory_nodes"]
-            )
-            
-        if self.monitor:
-            # Record initial metrics
-            self._update_graph_metrics()
-    
     async def store_memory(
         self,
         content: str,
         vector: List[float],
         metadata: Dict[str, Any],
-        importance: float = 1.0
+        importance_score: float = 0.5
     ) -> str:
-        """Store a memory node with its vector embedding."""
-        if self.monitor:
-            async with self.monitor.time_operation("arangodb", "store", "memory"):
-                result = await self._store_memory_internal(content, vector, metadata, importance)
-                self.monitor.record_operation("arangodb", "store", "memory")
-                return result
-        else:
-            return await self._store_memory_internal(content, vector, metadata, importance)
+        """Store memory node with vector embedding."""
+        try:
+            node = VectorNode(
+                content=content,
+                vector=vector,
+                timestamp=datetime.now(),
+                importance_score=importance_score,
+                metadata=metadata
+            )
             
-    async def _store_memory_internal(
-        self,
-        content: str,
-        vector: List[float],
-        metadata: Dict[str, Any],
-        importance: float
-    ) -> str:
-        node = VectorNode(
-            content=content,
-            vector=vector,
-            timestamp=datetime.utcnow(),
-            importance_score=importance,
-            metadata=metadata
-        )
-        
-        result = self.db.collection("memory_nodes").insert(node.dict())
-        
-        if self.monitor:
-            # Record memory usage after insert
-            collection_size = self.db.collection("memory_nodes").statistics()["figures"]["documentsSize"]
-            self.monitor.record_memory_usage("arangodb", "memory_nodes", collection_size)
-            self._update_graph_metrics()
+            result = self.db.collection("memory_nodes").insert(node.model_dump())
+            node_id = result["_id"]
             
-        return result["_key"]
-    
-    async def create_relationship(
+            if self.monitor:
+                self.monitor.record_metric("memory_store_success", 1)
+                
+            return node_id
+            
+        except Exception as e:
+            logger.error(f"Failed to store memory: {str(e)}")
+            if self.monitor:
+                self.monitor.record_metric("memory_store_failure", 1)
+            raise
+            
+    async def create_edge(
         self,
-        from_key: str,
-        to_key: str,
+        from_node: str,
+        to_node: str,
         relation_type: str,
         weight: float = 1.0,
-        context_window: int = 0
+        context_window: int = 5
     ) -> str:
-        """Create a relationship between two memory nodes."""
-        edge = MemoryEdge(
-            from_node=from_key,
-            to_node=to_key,
-            relation_type=relation_type,
-            weight=weight,
-            context_window=context_window
-        )
-        
-        result = self.db.collection("memory_edges").insert(edge.dict())
-        return result["_key"]
-    
+        """Create edge between memory nodes."""
+        try:
+            edge = MemoryEdge(
+                from_node=from_node,
+                to_node=to_node,
+                relation_type=relation_type,
+                weight=weight,
+                context_window=context_window
+            )
+            
+            result = self.db.collection("memory_edges").insert(edge.model_dump())
+            edge_id = result["_id"]
+            
+            if self.monitor:
+                self.monitor.record_metric("edge_create_success", 1)
+                
+            return edge_id
+            
+        except Exception as e:
+            logger.error(f"Failed to create edge: {str(e)}")
+            if self.monitor:
+                self.monitor.record_metric("edge_create_failure", 1)
+            raise
+            
     async def find_similar_memories(
         self,
         query_vector: List[float],
         limit: int = 5,
         min_similarity: float = 0.7
     ) -> List[Dict[str, Any]]:
-        """Find similar memories using vector similarity search."""
-        if self.monitor:
-            async with self.monitor.time_operation("arangodb", "similarity_search", "memory"):
-                results = await self._find_similar_internal(query_vector, limit, min_similarity)
-                
-                # Record similarity scores
-                for result in results:
-                    self.monitor.record_similarity_score("arangodb", "memory", result["similarity"])
-                    
-                return results
-        else:
-            return await self._find_similar_internal(query_vector, limit, min_similarity)
-            
-    async def _find_similar_internal(
-        self,
-        query_vector: List[float],
-        limit: int,
-        min_similarity: float
-    ) -> List[Dict[str, Any]]:
-        aql = """
-        FOR doc IN memory_nodes
-            LET similarity = COSINE_SIMILARITY(doc.vector, @query_vector)
-            FILTER similarity >= @min_similarity
-            SORT similarity DESC
-            LIMIT @limit
-            RETURN {
-                key: doc._key,
-                content: doc.content,
-                similarity: similarity,
-                metadata: doc.metadata,
-                timestamp: doc.timestamp
-            }
-        """
-        
-        cursor = self.db.aql.execute(
-            aql,
-            bind_vars={
-                "query_vector": query_vector,
-                "min_similarity": min_similarity,
-                "limit": limit
-            }
-        )
-        return [doc for doc in cursor]
-    
-    async def find_related_context(
-        self,
-        memory_key: str,
-        max_hops: int = 2,
-        min_weight: float = 0.5
-    ) -> List[Dict[str, Any]]:
-        """Find related memories through graph traversal."""
-        aql = """
-        FOR v, e, p IN 1..@max_hops
-            OUTBOUND @start_vertex memory_edges
-            FILTER e.weight >= @min_weight
-            RETURN {
-                key: v._key,
-                content: v.content,
-                path_length: LENGTH(p.edges),
-                total_weight: SUM(p.edges[*].weight),
-                metadata: v.metadata
-            }
-        """
-        
-        cursor = self.db.aql.execute(
-            aql,
-            bind_vars={
-                "start_vertex": f"memory_nodes/{memory_key}",
-                "max_hops": max_hops,
-                "min_weight": min_weight
-            }
-        )
-        return [doc for doc in cursor]
-    
-    async def get_context_window(
-        self,
-        center_key: str,
-        window_size: int = 5
-    ) -> List[Dict[str, Any]]:
-        """Get memories within a specific context window."""
-        aql = """
-        FOR v, e IN 1..1 ANY @center memory_edges
-            FILTER e.context_window <= @window_size
-            SORT e.context_window
-            RETURN {
-                key: v._key,
-                content: v.content,
-                window_position: e.context_window,
-                metadata: v.metadata
-            }
-        """
-        
-        cursor = self.db.aql.execute(
-            aql,
-            bind_vars={
-                "center": f"memory_nodes/{center_key}",
-                "window_size": window_size
-            }
-        )
-        return [doc for doc in cursor]
-    
-    async def prune_old_memories(
-        self,
-        older_than_days: int = 30,
-        keep_min_importance: float = 0.8
-    ) -> int:
-        """Remove old, unimportant memories while preserving their relationships."""
-        aql = """
-        FOR doc IN memory_nodes
-            FILTER doc.timestamp <= DATE_SUBTRACT(DATE_NOW(), @days, "day")
-            FILTER doc.importance_score < @min_importance
-            REMOVE doc IN memory_nodes
-            RETURN OLD
-        """
-        
-        cursor = self.db.aql.execute(
-            aql,
-            bind_vars={
-                "days": older_than_days,
-                "min_importance": keep_min_importance
-            }
-        )
-        return cursor.statistics()["removed"]
-
-    def _update_graph_metrics(self):
-        """Update Phoenix metrics for graph statistics."""
-        if not self.monitor:
-            return
-            
+        """Find similar memories using vector similarity."""
         try:
-            # Get node and edge counts
-            node_count = self.db.collection("memory_nodes").count()
-            edge_count = self.db.collection("memory_edges").count()
-            
-            # Get memory usage for each collection
-            nodes_size = self.db.collection("memory_nodes").statistics()["figures"]["documentsSize"]
-            edges_size = self.db.collection("memory_edges").statistics()["figures"]["documentsSize"]
-            
-            # Record memory usage
-            self.monitor.record_memory_usage("arangodb", "memory_nodes", nodes_size)
-            self.monitor.record_memory_usage("arangodb", "memory_edges", edges_size)
-            
-            # Get average node degree
-            aql = """
-            FOR v IN memory_nodes
-                LET degree = LENGTH(
-                    FOR e IN memory_edges
-                        FILTER e._from == v._id OR e._to == v._id
-                        RETURN 1
+            # AQL query for vector similarity search
+            query = """
+            FOR doc IN memory_nodes
+                LET similarity = LENGTH(doc.vector) == LENGTH(@query_vector)
+                    ? 1 - SQRT(SUM(
+                        FOR i IN RANGE(0, LENGTH(@query_vector) - 1)
+                            RETURN POW(doc.vector[i] - @query_vector[i], 2)
+                    ))
+                    : 0
+                FILTER similarity >= @min_similarity
+                SORT similarity DESC
+                LIMIT @limit
+                RETURN MERGE(
+                    KEEP(doc, ["_id", "content", "vector", "metadata"]),
+                    { similarity: similarity }
                 )
-                COLLECT AGGREGATE avg_degree = AVG(degree)
-                RETURN avg_degree
             """
-            cursor = self.db.aql.execute(aql)
-            avg_degree = next(cursor, [0])[0]
             
-            # Update graph metrics
-            self.monitor.update_graph_metrics("arangodb", {
-                "nodes": node_count,
-                "edges": edge_count,
-                "avg_degree": avg_degree,
-                "density": edge_count / (node_count * (node_count - 1)) if node_count > 1 else 0
-            })
+            cursor = self.db.aql.execute(
+                query,
+                bind_vars={
+                    "query_vector": query_vector,
+                    "min_similarity": min_similarity,
+                    "limit": limit
+                }
+            )
             
-            # Update cache stats if available
-            cache_stats = self.db.statistics()
-            if "cache" in cache_stats:
-                hits = cache_stats["cache"]["hits"]
-                misses = cache_stats["cache"]["misses"]
-                self.monitor.update_cache_stats("arangodb", "memory", hits, misses)
+            results = [doc for doc in cursor.batch()]
+            
+            if self.monitor:
+                self.monitor.record_metric("similarity_search_success", 1)
                 
+            return results
+            
         except Exception as e:
-            logger.error(f"Error updating graph metrics: {str(e)}")
+            logger.error(f"Failed to find similar memories: {str(e)}")
+            if self.monitor:
+                self.monitor.record_metric("similarity_search_failure", 1)
+            raise
+            
+    async def get_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve memory by ID."""
+        try:
+            memory = self.db.collection("memory_nodes").get(memory_id)
+            return memory
+            
+        except Exception as e:
+            logger.error(f"Failed to get memory {memory_id}: {str(e)}")
+            raise
+            
+    async def update_memory(
+        self,
+        memory_id: str,
+        importance_score: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Update memory node properties."""
+        try:
+            update_data = {}
+            if importance_score is not None:
+                update_data["importance_score"] = importance_score
+            if metadata is not None:
+                update_data["metadata"] = metadata
+                
+            if update_data:
+                self.db.collection("memory_nodes").update(memory_id, update_data)
+                return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to update memory {memory_id}: {str(e)}")
+            raise
+            
+    async def delete_memory(self, memory_id: str) -> bool:
+        """Delete memory node and its edges."""
+        try:
+            self.db.collection("memory_nodes").delete(memory_id)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to delete memory {memory_id}: {str(e)}")
+            raise

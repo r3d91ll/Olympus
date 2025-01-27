@@ -17,19 +17,26 @@
 
 4. **Code Quality**
    - Run formatters before committing:
+
      ```bash
      black olympus tests
      isort olympus tests
      ```
+
    - Run type checking:
+
      ```bash
      mypy olympus
      ```
+
    - Run linting:
+
      ```bash
      flake8 olympus tests
      ```
+
    - Ensure all tests pass:
+
      ```bash
      pytest
      ```
@@ -47,6 +54,7 @@
 ## Commit Messages
 
 Follow the conventional commits specification:
+
 - `feat:` New features
 - `fix:` Bug fixes
 - `docs:` Documentation changes
