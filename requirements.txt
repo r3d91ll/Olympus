@@ -37,3 +37,18 @@ isort==5.9.3
 # Documentation
 mkdocs==1.5.3
 mkdocs-material==9.5.3
+
+# Additional Dependencies from model_engine
+torch
+accelerate
+transformers
+diffusers
+vllm>=0.3.0  # For running LLMs with OpenAI-compatible API
+click
+pydantic
+numpy
+tqdm
+tensorboard
+wandb
+prometheus-client>=0.17.1
+pyyaml>=6.0.1
