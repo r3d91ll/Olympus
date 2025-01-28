@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+.venv
+
+# ML and Data
+*.h5
+*.pkl
+*.model
+*.joblib
+data/
+models/
+wandb/
+mlruns/
+logs/
+checkpoints/
+
+# Project-specific storage tiers
+elysium/
+asphodel/
+lethe/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+.cache
+.local/
+
+# Distribution
+*.tar.gz
+*.zip
+*.rar
+
+# Temp files
+*.tmp
+*.bak
+*.swp
+*~
