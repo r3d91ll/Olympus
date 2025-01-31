@@ -170,7 +170,45 @@ The River Styx architecture manifests in several key components:
    - Embedding Judge (Aeacus) - Entry/classification
    - Reference: `L5_orchestration_layer_build.md` - Judge Implementation
 
-4. **Storage Integration**
+4. **Hades Decoder-Encoder Architecture**
+
+   ```python
+   class HadesArchitecture:
+       def __init__(self):
+           self.encoder = EncoderStack()  # Multi-layer transformer stack
+           self.decoder = DecoderStack()  # Autoregressive decoder
+           self.judges = JudgeModels()    # CPU-based validation
+           
+       async def process_query(self, query: str) -> str:
+           # Phase 1: Encoding
+           encoded_context = await self.encoder.encode(query)
+           judge_feedback = await self.judges.validate(encoded_context)
+           
+           # Phase 2: Iterative Decoding
+           for step in range(max_steps):
+               # Generate next token
+               next_token = await self.decoder.step(
+                   encoded_context,
+                   judge_feedback
+               )
+               
+               # Get real-time validation
+               if next_token.requires_validation:
+                   feedback = await self.judges.validate_token(next_token)
+                   if not feedback.is_valid:
+                       # Backtrack and regenerate
+                       continue
+                       
+               yield next_token
+   ```
+
+   The Hades architecture implements:
+   - **Encoder Stack**: Processes input query and context into rich embeddings
+   - **Decoder Stack**: Generates responses with judge-guided token selection
+   - **Cross-Attention**: Allows decoder to reference encoded context
+   - **Judge Integration**: Real-time validation during generation
+
+5. **Storage Integration**
    - ArangoDB persistent collections
    - Trust-based tiering
    - Reference: `L3_database_layer_build.md` - Storage Strategy
@@ -181,6 +219,479 @@ This architecture ensures:
 - Natural filtering mechanism for knowledge persistence
 - Efficient resource utilization
 - Maintainable and scalable knowledge management
+
+### **3.4. Document Processing Flow**
+
+When a new document arrives, it follows this validation and storage pipeline:
+
+1. **Initial Document Reception**
+
+   ```python
+   async def process_new_document(doc: Dict[str, Any]) -> bool:
+       # Phase 1: Judge Processing
+       judge_results = await process_through_judges(doc)
+       if not judge_results.all_validated:
+           return False
+           
+       # Phase 2: Storage Operations
+       return await store_validated_results(judge_results)
+   ```
+
+2. **Judge Processing Pipeline**
+
+   ```python
+   async def process_through_judges(doc: Dict[str, Any]) -> JudgeResults:
+       # Parallel Processing Through Judges
+       results = await asyncio.gather(
+           minos.validate_content(doc),      # Document validation
+           rhadamanthus.extract_edges(doc),  # Graph relationships
+           aeacus.generate_embedding(doc)    # Vector embedding
+       )
+       return JudgeResults(*results)
+   ```
+
+3. **ArangoDB Storage Operations**
+
+   ```python
+   async def store_validated_results(results: JudgeResults) -> bool:
+       # AQL Operations for Storage
+       aql_operations = [
+           # Store document with metadata
+           """
+           INSERT { 
+               _key: @docKey, 
+               content: @content,
+               metadata: @metadata,
+               validation_score: @score
+           } INTO documents
+           """,
+           
+           # Store vector embedding
+           """
+           INSERT { 
+               _key: @docKey,
+               vector: @embedding,
+               dim: @dimensions
+           } INTO embeddings
+           """,
+           
+           # Create graph edges
+           """
+           FOR edge IN @edges
+               INSERT {
+                   _from: @docKey,
+                   _to: edge.target,
+                   type: edge.type,
+                   confidence: edge.score
+               } INTO relationships
+           """
+       ]
+       
+       # Execute operations in transaction
+       return await execute_aql_transaction(aql_operations, results)
+   ```
+
+4. **Transaction Execution**
+
+   ```python
+   async def execute_aql_transaction(operations: List[str], data: JudgeResults) -> bool:
+       try:
+           async with db.begin_transaction() as txn:
+               # Execute all AQL operations atomically
+               for op in operations:
+                   await txn.execute(op, bind_vars={
+                       'docKey': data.document_key,
+                       'content': data.content,
+                       'metadata': data.metadata,
+                       'score': data.validation_score,
+                       'embedding': data.embedding.tolist(),
+                       'dimensions': len(data.embedding),
+                       'edges': data.graph_edges
+                   })
+               return True
+       except Exception as e:
+           logger.error(f"Transaction failed: {e}")
+           return False
+   ```
+
+This flow ensures:
+
+1. **Atomic Operations**: All storage operations succeed or fail together
+2. **Data Consistency**: Document, embedding, and graph edges remain in sync
+3. **Validation**: Each judge's criteria must be met before storage
+4. **Traceability**: Full metadata and validation scores are stored
+
+The judges don't directly execute AQL - instead, they:
+
+1. Minos → Validates content and generates metadata
+2. Rhadamanthus → Identifies relationships as edge definitions
+3. Aeacus → Generates vector embeddings
+
+Their outputs are then translated into appropriate AQL operations by the storage layer.
+
+### **3.5. Context Augmentation Flow**
+
+The decoder model acts as an intelligent mediator between the judges' insights and the encoder's context:
+
+```python
+class HadesContextFlow:
+    async def process_query(self, query: str) -> str:
+        # Phase 1: Initial Context Retrieval
+        base_context = await self.db.get_relevant_context(query)
+        
+        # Phase 2: Judge Analysis
+        judge_insights = await asyncio.gather(
+            self.minos.analyze_context(base_context),      # Document validation
+            self.rhadamanthus.analyze_relations(base_context),  # Graph analysis
+            self.aeacus.analyze_embeddings(base_context)   # Vector space analysis
+        )
+        
+        # Phase 3: Decoder Integration
+        augmented_context = await self.decoder.integrate_insights(
+            original_context=base_context,
+            judge_insights=judge_insights,
+            query_intent=query
+        )
+        
+        # Phase 4: Enhanced Encoding
+        return await self.encoder.encode_with_augmented_context(
+            query=query,
+            context=augmented_context
+        )
+
+class HadesDecoder:
+    async def integrate_insights(
+        self, 
+        original_context: Dict,
+        judge_insights: List[JudgeInsight],
+        query_intent: str
+    ) -> AugmentedContext:
+        # Step 1: Analyze judge feedback
+        context_scores = {
+            'document_relevance': judge_insights[0].relevance_score,
+            'graph_connectivity': judge_insights[1].connection_strength,
+            'embedding_proximity': judge_insights[2].vector_similarity
+        }
+        
+        # Step 2: Identify context gaps
+        gaps = self.identify_context_gaps(
+            original_context,
+            context_scores,
+            query_intent
+        )
+        
+        # Step 3: Request additional context if needed
+        if gaps:
+            additional_context = await self.fetch_gap_filling_context(gaps)
+            original_context = self.merge_contexts(
+                original_context, 
+                additional_context
+            )
+        
+        # Step 4: Apply judge-based weightings
+        weighted_context = self.apply_judge_weights(
+            original_context,
+            context_scores
+        )
+        
+        return AugmentedContext(
+            content=weighted_context,
+            metadata={
+                'judge_scores': context_scores,
+                'gaps_filled': bool(gaps),
+                'context_quality': self.calculate_quality_score(weighted_context)
+            }
+        )
+```
+
+This flow demonstrates how:
+
+1. **Judges Augment Context**
+   - Analyze retrieved context from different perspectives
+   - Provide relevance scores and validation metrics
+   - Identify potential context gaps
+
+2. **Decoder Acts as Mediator**
+   - Integrates insights from all judges
+   - Identifies and fills context gaps
+   - Applies judge-based weightings to context
+   - Ensures context quality before encoding
+
+3. **Encoder Benefits**
+   - Receives judge-validated context
+   - Gets context with filled gaps
+   - Has access to relevance scores
+   - Can focus on semantic understanding
+
+4. **Quality Control**
+   - Context gaps are identified and filled
+   - Multiple validation perspectives
+   - Quality scores for tracking
+   - Metadata for debugging
+
+This creates a feedback loop where:
+
+1. Judges validate and analyze context
+2. Decoder integrates their insights
+3. Encoder uses enhanced context
+4. Better context → Better encoding → Better retrieval
+
+---
+
+## **3.6. Database Landscape vs Content Context**
+
+HADES implements two distinct types of updates:
+
+1. **Database Landscape Updates** (Encoder-Decoder-Judge Pipeline)
+
+   ```python
+   async def update_database_landscape(data: Dict[str, Any]) -> UpdateResult:
+       """Updates how data is connected and stored within ArangoDB"""
+       # Judges analyze database structure
+       landscape_analysis = await asyncio.gather(
+           minos.analyze_storage_patterns(data),     # Document storage patterns
+           rhadamanthus.analyze_connections(data),   # Existing relationships
+           aeacus.analyze_vector_clusters(data)      # Embedding distributions
+       )
+       
+       # Decoder determines optimal storage strategy
+       storage_decision = await decoder.optimize_storage(
+           analysis=landscape_analysis,
+           current_layout=await db.get_collection_stats()
+       )
+       
+       # Update database organization
+       return await db.apply_storage_optimization(
+           strategy=storage_decision,
+           metadata={'analysis': landscape_analysis}
+       )
+   ```
+
+2. **Content Context Updates** (ECL - External Context Layer)
+
+   ```python
+   async def update_content_context(
+       domain: str,
+       context_source: Union[str, Path]
+   ) -> ContextResult:
+       """Updates understanding of specific knowledge domain or filesystem"""
+       # ECL handles domain-specific context
+       if is_filesystem_context(context_source):
+           # Update context about file/directory structure
+           return await ecl.update_filesystem_context(
+               path=context_source,
+               existing_context=current_context.get(domain)
+           )
+       else:
+           # Update domain-specific knowledge context
+           return await ecl.update_knowledge_context(
+               domain=domain,
+               source=context_source,
+               existing_context=current_context.get(domain)
+           )
+   ```
+
+**Key Differences:**
+
+1. **Database Landscape Updates**
+   - Focus on HOW data is stored and connected
+   - Optimize database structure and relationships
+   - Judges analyze storage patterns and connections
+   - Decoder optimizes database organization
+   - Results in AQL operations for restructuring
+
+2. **ECL Context Updates**
+   - Focus on WHAT the data means
+   - Build understanding of specific domains
+   - Independent of storage structure
+   - Can handle both knowledge and filesystem contexts
+   - Results in updated contextual understanding
+
+**Example Scenarios:**
+
+```python
+# Scenario 1: Database Landscape Update
+await update_database_landscape({
+    'collection': 'documents',
+    'pattern': 'frequent_access_to_related_nodes',
+    'suggestion': 'create_edge_index_for_performance'
+})
+
+# Scenario 2: ECL Context Update
+await update_content_context(
+    domain='python_codebase',
+    context_source=Path('/path/to/project')
+)
+```
+
+This separation ensures:
+
+1. Database optimization happens independently of content understanding
+2. Domain-specific context can evolve without affecting storage structure
+3. Both systems can work in parallel to improve different aspects
+4. Clear responsibility separation between storage and meaning
+
+The system maintains two key collections in ArangoDB:
+
+- `documents`: Main document store with embeddings
+- `training_samples`: Temporary store for negative samples
+
+Training Schedule:
+
+1. Daily: Generate negative samples for new documents
+2. Weekly: Full training run during maintenance window
+3. Monthly: Clean up old training data and validate model
+
+---
+
+## **3.7. Batch Training and Negative Sampling**
+
+HADES implements an efficient batch training strategy using ArangoDB's capabilities:
+
+```python
+class BatchTrainingOrchestrator:
+    async def schedule_training_job(self):
+        """Weekly training job scheduled during low-usage periods"""
+        # Step 1: Collect candidates for negative sampling
+        candidates = await self.db.run_query("""
+            FOR doc IN documents
+            FILTER doc.last_accessed >= DATE_SUBTRACT(DATE_NOW(), "P7D")
+            SORT doc.access_count DESC
+            LIMIT 1000
+            RETURN {
+                _key: doc._key,
+                embedding: doc.embedding,
+                context: doc.context
+            }
+        """)
+        
+        # Step 2: Generate negative samples in batches
+        negative_samples = await self.generate_batch_negatives(candidates)
+        
+        # Step 3: Store in ArangoDB's training collection
+        await self.db.run_query("""
+            FOR sample IN @samples
+            INSERT {
+                _key: CONCAT('neg_', sample.original_key),
+                original_doc: sample.original_key,
+                negative_embedding: sample.embedding,
+                generated_at: DATE_NOW(),
+                training_metadata: sample.metadata
+            } INTO training_samples
+        """, bind_vars={'samples': negative_samples})
+
+    async def generate_batch_negatives(
+        self, 
+        candidates: List[Dict]
+    ) -> List[Dict]:
+        """Generate negative samples in parallel"""
+        tasks = []
+        for doc in candidates:
+            tasks.append(self.diffusion_sampler.generate(
+                doc['embedding'],
+                doc['context'],
+                n_samples=5
+            ))
+        
+        results = await asyncio.gather(*tasks)
+        return [
+            {
+                'original_key': doc['_key'],
+                'embedding': neg_sample,
+                'metadata': {
+                    'generation_method': 'diffusion',
+                    'original_context': doc['context']
+                }
+            }
+            for doc, neg_samples in zip(candidates, results)
+            for neg_sample in neg_samples
+        ]
+
+    async def run_weekly_training(self):
+        """Execute training during maintenance window"""
+        # Step 1: Get stored negative samples
+        training_data = await self.db.run_query("""
+            FOR sample IN training_samples
+            FILTER sample.generated_at >= DATE_SUBTRACT(DATE_NOW(), "P7D")
+            RETURN sample
+        """)
+        
+        # Step 2: Update embeddings model
+        await self.model.train_batch(
+            positive_examples=training_data['original_docs'],
+            negative_examples=training_data['negative_samples']
+        )
+        
+        # Step 3: Clean up old samples
+        await self.db.run_query("""
+            FOR sample IN training_samples
+            FILTER sample.generated_at < DATE_SUBTRACT(DATE_NOW(), "P7D")
+            REMOVE sample IN training_samples
+        """)
+```
+
+This approach provides several benefits:
+
+1. **Resource Optimization**
+   - Negative sampling happens during off-peak hours
+   - Batch processing reduces system load
+   - Training data is pre-generated and stored
+
+2. **Storage Efficiency**
+   - ArangoDB manages training data lifecycle
+   - Automatic cleanup of old samples
+   - Structured storage of training metadata
+
+3. **Training Improvements**
+   - More comprehensive negative samples
+   - Better coverage of recent data
+   - Parallel processing for generation
+
+4. **Operational Benefits**
+   - Scheduled maintenance windows
+   - No impact on real-time operations
+   - Clear training data lineage
+
+The system maintains two key collections in ArangoDB:
+
+- `documents`: Main document store with embeddings
+- `training_samples`: Temporary store for negative samples
+
+Training Schedule:
+
+1. Daily: Generate negative samples for new documents
+2. Weekly: Full training run during maintenance window
+3. Monthly: Clean up old training data and validate model
+
+### **Implementation Notes for Batch Training**
+
+The following aspects will need to be addressed during the implementation phase:
+
+1. **Monitoring and Metrics**
+   - [ ] Batch process performance tracking
+   - [ ] Sample generation success rates
+   - [ ] Training completion metrics
+   - [ ] Resource utilization during batch windows
+
+2. **ArangoDB Task Scheduling**
+   - [ ] Integration with native scheduler
+   - [ ] Task priority management
+   - [ ] Resource allocation controls
+   - [ ] Multi-node coordination
+
+3. **Fallback Strategies**
+   - [ ] Handling missed training windows
+   - [ ] Backup scheduling logic
+   - [ ] Data consistency checks
+   - [ ] Recovery procedures
+
+4. **Sample Validation**
+   - [ ] Quality metrics for generated samples
+   - [ ] Validation pipeline
+   - [ ] Rejection criteria
+   - [ ] Sample diversity checks
+
+These items are not blocking for initial implementation but must be addressed during the build phase to ensure production readiness.
 
 ---
 
