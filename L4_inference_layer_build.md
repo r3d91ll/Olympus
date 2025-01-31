@@ -5,7 +5,7 @@
 Layer 4 serves as the Routing and Coordination layer in HADES, managing the flow of operations between:
 
 - Layer 2's model operations (inference and embedding generation)
-- Layer 3's storage tiers (Elysium, Asphodel, Lethe) for efficient knowledge access
+- Layer 3's storage interfaces for efficient knowledge access
 - Higher-level orchestration in Layer 5
 
 ## Architecture
@@ -38,11 +38,7 @@ graph TD
     end
     
     subgraph Layer3[Layer 3]
-        subgraph MemoryTier[Memory Tiers]
-            EL[Elysium - Hot Storage]
-            AS[Asphodel - Warm Storage]
-            LE[Lethe - Cold Storage]
-        end
+        SI[Storage Interface]
     end
     
     %% Connections to Layer 2
@@ -51,9 +47,8 @@ graph TD
     OM -->|Results| KV
     
     %% Connections to Layer 3
-    CA -->|Access Hot Data| EL
-    CA -->|Access Warm Data| AS
-    CA -->|Access Cold Data| LE
+    CA -->|Access Data| SI
+    SI -->|Retrieve Context| CA
     
     %% Internal Connections
     CA -->|Context| TR
@@ -74,7 +69,7 @@ graph TD
     class CA,TR,KV core
     class MC,SC,HC coord
     class RM,CM,VM mgr
-    class EL,AS,LE storage
+    class SI storage
 ```
 
 ## Core Responsibilities
@@ -85,18 +80,18 @@ graph TD
    - Handle task prioritization and queueing
 
 2. **Context Management**
-   - Assemble relevant context from storage tiers
+   - Assemble relevant context from storage interfaces
    - Coordinate data access patterns
    - Optimize context retrieval strategies
 
 3. **Knowledge Coordination**
    - Validate knowledge updates
-   - Coordinate between storage tiers
+   - Coordinate between storage interfaces
    - Manage data consistency
 
 4. **Resource Optimization**
    - Balance load across model endpoints
-   - Optimize storage tier access
+   - Optimize storage interface access
    - Monitor and adjust routing patterns
 
 ## Validation & Mediation
@@ -236,6 +231,213 @@ class TrustScoreMonitor:
                 await self.layer5.log_anomaly(anomaly)
 ```
 
+## Storage Integration
+
+Layer 4 interacts with ArangoDB through Layer 3's interfaces:
+
+```python
+from typing import Dict, Any
+from aioarangodb import ArangoClient
+
+class StorageInterface:
+    """Interface for ArangoDB operations through Layer 3."""
+    
+    def __init__(self, client: ArangoClient):
+        self.client = client
+        self.db = client.db('hades')
+        
+    async def store_knowledge(self, data: Dict[str, Any]) -> bool:
+        """Store validated knowledge in ArangoDB."""
+        try:
+            # Store in appropriate collection based on data type
+            if 'embedding' in data:
+                await self.db.collection('embeddings').insert(data)
+            elif 'graph' in data:
+                await self.db.collection('knowledge_graph').insert(data)
+            else:
+                await self.db.collection('documents').insert(data)
+            return True
+        except Exception as e:
+            logger.error(f"Storage error: {e}")
+            return False
+
+    async def retrieve_context(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        """Retrieve context from ArangoDB using ArangoSearch."""
+        try:
+            # Use ArangoSearch view for semantic search
+            results = await self.db.view('semantic_view').search(query)
+            return self._process_results(results)
+        except Exception as e:
+            logger.error(f"Retrieval error: {e}")
+            return {}
+```
+
+### Query Optimization
+
+Layer 4 uses ArangoDB's built-in features for efficient querying:
+
+```python
+class QueryOptimizer:
+    """Optimizes queries for ArangoDB."""
+    
+    async def optimize_query(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply query optimizations."""
+        # Use ArangoDB's native query optimizer
+        optimized = {
+            'sort': ['SORT doc.timestamp DESC'],
+            'limit': 100,
+            'cache': True,
+            'fullCount': True,
+            'optimizer': {
+                'rules': ['-all', '+use-indexes']
+            }
+        }
+        return {**query, **optimized}
+```
+
+### Storage Configuration
+
+Layer 4 relies on the storage configuration defined in L1_hardware.md:
+
+```python
+class StorageConfig:
+    """Storage configuration for ArangoDB."""
+    
+    def __init__(self):
+        # Use paths from L1_hardware.md
+        self.graph_vector_path = "/var/lib/arangodb3/graph_vector"  # RAID0
+        self.document_path = "/var/lib/arangodb3/document"          # RAID1
+        self.cache_path = "/var/lib/arangodb3/cache"               # tmpfs
+        
+    def get_collection_config(self, collection_type: str) -> Dict[str, Any]:
+        """Get configuration for a collection type."""
+        configs = {
+            'embeddings': {
+                'path': self.graph_vector_path,
+                'compression': True,
+                'cache_enabled': True
+            },
+            'knowledge_graph': {
+                'path': self.graph_vector_path,
+                'compression': True,
+                'cache_enabled': True
+            },
+            'documents': {
+                'path': self.document_path,
+                'compression': True,
+                'cache_enabled': False
+            }
+        }
+        return configs.get(collection_type, {})
+```
+
+## Model Architecture
+
+HADES implements two distinct model architectures:
+
+### 1. Judge Models (Embedding-based Validation)
+
+The three judge models (Minos, Rhadamanthus, Aeacus) use CPU-based embedding with LLM-KG fusion:
+
+```python
+from typing import Dict, Any
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+class JudgeModelManager:
+    """Manages the three CPU-based judge models."""
+    
+    def __init__(self):
+        self.minos = self._init_judge("minos")        # Document validation
+        self.rhadamanthus = self._init_judge("rhad")  # Graph validation
+        self.aeacus = self._init_judge("aeacus")      # Embedding validation
+        
+    def _init_judge(self, judge_name: str) -> SentenceTransformer:
+        """Initialize a CPU-based judge model."""
+        model = SentenceTransformer(f'hades/judge_{judge_name}')
+        model.to('cpu')  # Ensure CPU execution
+        return model
+        
+    async def get_validation(self, data: Dict[str, Any]) -> Dict[str, bool]:
+        """Get validation decisions from all judges."""
+        return {
+            'document': await self._validate_with_minos(data),
+            'graph': await self._validate_with_rhadamanthus(data),
+            'embedding': await self._validate_with_aeacus(data)
+        }
+
+class NegativeSampler:
+    """Implements diffusion-based negative sampling for judge models."""
+    
+    def sample_negatives(self, positive_examples: np.ndarray) -> np.ndarray:
+        """Generate negative samples using diffusion process."""
+        # Implementation from llm_kg_fusion_implementation.md
+        pass
+```
+
+### 2. Hades Frontend Model (InCA/ECL)
+
+The main Hades model implements InCA/ECL for continuous learning:
+
+```python
+from typing import Dict, Any, List
+from dataclasses import dataclass
+
+@dataclass
+class HadesContext:
+    """Context structure for Hades model."""
+    query_tags: List[str]
+    class_distributions: Dict[str, np.ndarray]
+    accumulated_context: Dict[str, Any]
+    context_score: float
+
+class HadesModel:
+    """Frontend model implementing InCA/ECL architecture."""
+    
+    def __init__(self, llm, external_learner):
+        self.llm = llm  # Main LLM for inference
+        self.ecl = external_learner  # External Continual Learner
+        self.tag_generator = TagGenerator(llm)
+        self.gaussian_model = GaussianModel()
+        
+    async def process_query(self, query: str, session_id: str) -> Dict[str, Any]:
+        """Process query using InCA/ECL architecture."""
+        # Stage 1: Generate contextual tags
+        tags = await self.tag_generator.generate_tags(query)
+        
+        # Stage 2: Update class distributions
+        class_dists = await self.gaussian_model.update_distributions(tags)
+        
+        # Stage 3: Accumulate context
+        context = await self.ecl.accumulate_context(
+            query=query,
+            tags=tags,
+            distributions=class_dists
+        )
+        
+        # Generate response
+        response = await self.llm.generate(
+            prompt=query,
+            context=context
+        )
+        
+        # Update ECL with response
+        await self.ecl.update(
+            query=query,
+            response=response,
+            context=context
+        )
+        
+        return {
+            'response': response,
+            'context': context,
+            'metadata': {
+                'tags': tags,
+                'distributions': class_dists
+            }
+        }
+```
+
 ## Layer Interaction Patterns
 
 1. **With Layer 2 (Model Engine)**
@@ -244,16 +446,80 @@ class TrustScoreMonitor:
    - Monitor model availability and performance
 
 2. **With Layer 3 (Database)**
-   - Coordinate access to storage tiers:
-     - Elysium: Hot storage for frequently accessed data
-     - Asphodel: Warm storage for less frequently accessed data
-     - Lethe: Cold storage for infrequently accessed data
+   - Coordinate access to storage interfaces:
+     - Use ArangoDB for efficient data retrieval
    - Optimize data retrieval patterns
 
 3. **With Layer 5 (Orchestration)**
    - Receive high-level routing policies
    - Report routing metrics and statistics
    - Implement orchestration decisions
+
+## Layer Integration
+
+The two model architectures are integrated but serve different purposes:
+
+1. **Judge Models**:
+   - Validate knowledge updates
+   - Ensure data consistency
+   - Manage trust scores
+   - CPU-optimized for efficient validation
+   - Use LLM-KG fusion with negative sampling
+   - Managed by Layer 2 (Model Engine)
+
+2. **Hades Model**:
+   - Handles user interactions
+   - Accumulates context over time
+   - Learns continuously from interactions
+   - GPU-optimized for fast inference
+   - Uses InCA/ECL architecture
+   - Managed by Layer 4 (Routing)
+
+### Integration Flow
+
+```python
+class ModelOrchestrator:
+    """Orchestrates interaction between Hades and Judge models."""
+    
+    def __init__(self):
+        self.hades = HadesModel()
+        self.judges = JudgeModelManager()
+        
+    async def process_user_query(self, query: str, session_id: str) -> Dict[str, Any]:
+        """Process user query through Hades."""
+        return await self.hades.process_query(query, session_id)
+        
+    async def validate_knowledge(self, data: Dict[str, Any]) -> bool:
+        """Validate knowledge through judge models."""
+        validations = await self.judges.get_validation(data)
+        return all(validations.values())
+        
+    async def update_knowledge(self, session_data: Dict[str, Any]) -> None:
+        """Update knowledge if validation passes."""
+        if await self.validate_knowledge(session_data):
+            await self.hades.ecl.update_knowledge(session_data)
+```
+
+### Memory Management
+
+```python
+class MemoryManager:
+    """Manages different memory types across models."""
+    
+    def __init__(self):
+        self.hades_memory = {}  # InCA/ECL memory
+        self.judge_memory = {}  # Embedding model memory
+        
+    async def update_hades_memory(self, session_id: str, data: Dict[str, Any]):
+        """Update Hades' InCA/ECL memory."""
+        if session_id not in self.hades_memory:
+            self.hades_memory[session_id] = []
+        self.hades_memory[session_id].append(data)
+        
+    async def update_judge_memory(self, key: str, embeddings: np.ndarray):
+        """Update judge models' memory."""
+        self.judge_memory[key] = embeddings
+```
 
 ## Components
 

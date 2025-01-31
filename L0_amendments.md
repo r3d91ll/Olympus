@@ -7,9 +7,11 @@ _Last Updated: 2025-01-31_
 
 ## 📌 Amendment #001 - Removing Manual Tiered Storage, Letting ArangoDB Handle It  
 
-**Status:** Approved for Implementation  
-**Date:** 2025-01-31  
-**Author:** Project Architect  
+**Status:** ✅ Implemented  
+**Implementation Progress:**  
+- ✅ L3/L4 storage interfaces updated  
+- ✅ RAID paths configured in L1_hardware.md  
+- ✅ Performance monitoring added  
 
 ### 🔹 Summary of Change  
 
@@ -25,9 +27,11 @@ Originally, HADES implemented a **manual three-tier memory system (Elysium, Asph
 
 ## 📌 Amendment #002 - Expanding Model Hosting Beyond Ollama  
 
-**Status:** Proposed  
-**Date:** 2025-01-31  
-**Author:** Project Architect  
+**Status:** ⚠️ Partially Implemented  
+**Remaining Work:**  
+- ❌ vLLM/DeepSpeed integration in L2  
+- ❌ Dynamic backend switching UI  
+- ✅ Ollama remains primary host  
 
 ### 🔹 Summary of Change  
 
@@ -45,9 +49,16 @@ HADES will support **multiple model hosting backends** alongside **Ollama**, inc
 
 ## 📌 Amendment #003 - Separation of Judgment and Execution for Updates  
 
-**Status:** 🔥 Important (Critical for System Architecture)  
-**Date:** 2025-01-31  
-**Author:** Project Architect  
+**Status:** ✅ Implemented  
+**Implementation Evidence:**  
+```python  
+# L4_inference_layer_build.md  
+class ValidationOrchestrator:  
+    async def validate_update(self, data):  
+        if not await self.judges.validate(data):  
+            return False  
+        return await self.storage.execute(data)  
+```  
 
 ### 🔹 Summary of Change  
 
@@ -63,9 +74,10 @@ ModernBERT models (Embedding, Graph, Document) act as **Judges** to determine up
 
 ## 📌 Amendment #004 - Moving Embedding Model Operations to CPU  
 
-**Status:** 🔥 Important (Resource Optimization)  
-**Date:** 2025-01-31  
-**Author:** Project Architect  
+**Status:** ✅ Implemented  
+**Verification:**  
+- ✅ CPU-bound tags in L4 inference layer  
+- ✅ Weekly fine-tuning jobs configured  
 
 ### 🔹 Summary of Change  
 
@@ -81,9 +93,10 @@ All **embedding-related operations** in HADES will be **moved to CPU**, freeing 
 
 ## 📌 Amendment #005 - Using ArangoDB TTL Collections Instead of Redis  
 
-**Status:** 🔥 Important (Simplifies System Design)  
-**Date:** 2025-01-31  
-**Author:** Project Architect  
+**Status:** ❌ Not Started  
+**Blockers:**  
+- Need TTL collection schema in L3  
+- Cache expiration policies undefined  
 
 ### 🔹 Summary of Change  
 
@@ -95,11 +108,14 @@ HADES Judges will store **temporary learning signals & past judgments** inside *
 ✅ **Avoid using Redis as an extra dependency.**  
 ✅ **Ensure ArangoDB’s cache is optimized for fast lookups.**  
 
+---
+
 ## 📌 Amendment #006 - Introducing a 4th Decoder Model for the HADES Frontend  
 
-**Status:** 🔥 Important (Core System Upgrade)  
-**Date:** 2025-02-01  
-**Author:** Project Architect  
+**Status:** ❌ Design Phase  
+**Pending Tasks:**  
+- ❗ Decoder integration point in L4  
+- ❗ Performance benchmarks needed  
 
 ### 🔹 Summary of Change  
 
@@ -185,4 +201,3 @@ The **InCA framework** (In-context Continual Learning Assisted by an External Co
 ---
 
 🔥 **These upgrades will make HADES fully dynamic, allowing it to manage and expand its own knowledge base recursively.** 🚀  
-"""

@@ -133,12 +133,15 @@ HADES implements a unique architectural pattern inspired by Greek mythology's Ri
    - Implementation: See `L4_inference_layer_build.md` - Direct Storage Protocol
 
 2. **Accumulation Pattern** ("Earning a coin")
-   - Core InCA/ECL functionality for context evolution
-   - Implements innovative context accumulation techniques from [arXiv:2412.15563v1]
-     - Dynamic context windows
-     - Hierarchical relevance scoring
-     - Temporal context binding
-   - Automatically triggers judge evaluation at context saturation
+   - Implements InCA/ECL architecture [arXiv:2412.15563v1] for sophisticated context evolution:
+     - Tag Generation: Extracts semantic tags and intentions from queries
+     - Gaussian Modeling: Models class distributions in embedding space
+     - Mahalanobis Distance: Measures semantic relevance to existing knowledge
+   - Three-stage context accumulation:
+     1. Query → Tags: Generates contextually rich tags using LLM
+     2. Tags → Class Selection: Uses Gaussian modeling to identify relevant knowledge domains
+     3. Context Assembly: Builds focused context using only relevant class knowledge
+   - Automatically triggers judge evaluation when sufficient contextual evidence accumulates
    - Implementation: See `L4_inference_layer_build.md` - InCA/ECL Implementation
 
 3. **Transient Pattern** ("Passing through")
@@ -173,6 +176,7 @@ The River Styx architecture manifests in several key components:
    - Reference: `L3_database_layer_build.md` - Storage Strategy
 
 This architecture ensures:
+
 - Clear separation of transient and persistent knowledge
 - Natural filtering mechanism for knowledge persistence
 - Efficient resource utilization
